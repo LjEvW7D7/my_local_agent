@@ -1,0 +1,427 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Кот — ИИ-ментор</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ink: #161c2b;
+    --panel: #1f2740;
+    --panel-2: #253052;
+    --brass: #c98a3e;
+    --brass-glow: rgba(201,138,62,.35);
+    --sage: #7ea896;
+    --rose: #c96a6a;
+    --fog: #8b93ab;
+    --paper: #eef1f8;
+    --border: #2c3654;
+  }
+  *{ box-sizing: border-box; }
+  html,body{ height:100%; margin:0; }
+  body{
+    background: var(--ink);
+    color: var(--paper);
+    font-family: 'Inter', sans-serif;
+    display:flex;
+    overflow:hidden;
+  }
+  /* ---------- Боковая панель ---------- */
+  .rail{
+    width: 300px;
+    min-width: 300px;
+    background: var(--panel);
+    border-right: 1px solid var(--border);
+    display:flex;
+    flex-direction:column;
+    padding: 22px 18px;
+    overflow-y:auto;
+  }
+  .brand{
+    font-family:'Source Serif 4', serif;
+    font-size: 22px;
+    font-weight:600;
+    letter-spacing: .01em;
+    margin-bottom: 4px;
+  }
+  .brand-sub{
+    font-size: 12px;
+    color: var(--fog);
+    margin-bottom: 26px;
+  }
+  .section-title{
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: .12em;
+    color: var(--fog);
+    margin: 22px 0 10px;
+  }
+  .section-title:first-of-type{ margin-top:0; }
+  .rail-card{
+    background: var(--panel-2);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 10px 12px;
+    margin-bottom: 8px;
+    font-size: 13px;
+    line-height: 1.4;
+  }
+  .rail-empty{
+    color: var(--fog);
+    font-size: 13px;
+    font-style: italic;
+    padding: 4px 2px;
+  }
+  .event-time{
+    font-family:'JetBrains Mono', monospace;
+    color: var(--brass);
+    font-size: 12px;
+    margin-right: 8px;
+  }
+  .task-row{ display:flex; align-items:flex-start; gap:8px; }
+  .task-dot{
+    width:8px; height:8px; border-radius:50%;
+    margin-top:5px; flex-shrink:0;
+    background: var(--fog);
+  }
+  .task-dot.high{ background: var(--rose); }
+  .task-dot.normal{ background: var(--brass); }
+  .task-dot.low{ background: var(--fog); }
+  .task-due{ color: var(--fog); font-size: 11px; font-family:'JetBrains Mono', monospace; }
+
+  .progress-row{ margin-bottom: 12px; }
+  .progress-top{ display:flex; justify-content:space-between; font-size:13px; margin-bottom:4px; }
+  .progress-topic{ color: var(--paper); }
+  .progress-dots{ font-family:'JetBrains Mono', monospace; letter-spacing: 2px; color: var(--brass); font-size: 13px; }
+  .progress-dots .empty{ color: var(--border); }
+
+  /* ---------- Основная область ---------- */
+  .main{
+    flex:1;
+    display:flex;
+    flex-direction:column;
+    height:100vh;
+    position:relative;
+  }
+  .chat-header{
+    padding: 20px 32px;
+    border-bottom: 1px solid var(--border);
+    display:flex;
+    align-items:center;
+    gap: 14px;
+    position:relative;
+    overflow:hidden;
+  }
+  /* Сигнатурный элемент: тёплое свечение настольной лампы за статусом ментора */
+  .chat-header::before{
+    content:"";
+    position:absolute;
+    top:-60px; left:-40px;
+    width:220px; height:220px;
+    background: radial-gradient(circle, var(--brass-glow) 0%, transparent 70%);
+    pointer-events:none;
+  }
+  .status-dot{
+    width:10px; height:10px;
+    border-radius:50%;
+    background: var(--brass);
+    box-shadow: 0 0 10px 2px var(--brass-glow);
+    animation: breathe 3s ease-in-out infinite;
+    z-index:1;
+  }
+  .status-dot.thinking{ animation: breathe 0.8s ease-in-out infinite; }
+  @keyframes breathe{
+    0%,100%{ opacity:1; }
+    50%{ opacity:.4; }
+  }
+  .header-text{ z-index:1; }
+  .header-name{ font-family:'Source Serif 4', serif; font-size:19px; font-weight:600; }
+  .header-status{ font-size:12px; color: var(--fog); }
+
+  .chat-scroll{
+    flex:1;
+    overflow-y:auto;
+    padding: 28px 32px;
+    display:flex;
+    flex-direction:column;
+    gap: 16px;
+  }
+  .msg{
+    max-width: 640px;
+    padding: 12px 16px;
+    border-radius: 12px;
+    font-size: 14.5px;
+    line-height: 1.55;
+    white-space: pre-wrap;
+  }
+  .msg.user{
+    align-self:flex-end;
+    background: var(--brass);
+    color: #1a1206;
+    border-bottom-right-radius: 3px;
+  }
+  .msg.assistant{
+    align-self:flex-start;
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-bottom-left-radius: 3px;
+    font-family: 'Source Serif 4', serif;
+  }
+  .msg.assistant::before{
+    content: "Кот";
+    display:block;
+    font-family: 'Inter', sans-serif;
+    font-size: 11px;
+    color: var(--brass);
+    text-transform: uppercase;
+    letter-spacing: .08em;
+    margin-bottom: 4px;
+  }
+  .empty-state{
+    margin: auto;
+    text-align:center;
+    color: var(--fog);
+    font-family:'Source Serif 4', serif;
+    font-size: 16px;
+    max-width: 380px;
+  }
+
+  .composer{
+    padding: 18px 32px 26px;
+    border-top: 1px solid var(--border);
+    display:flex;
+    gap: 10px;
+  }
+  .composer textarea{
+    flex:1;
+    resize:none;
+    background: var(--panel-2);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    color: var(--paper);
+    font-family:'Inter', sans-serif;
+    font-size: 14px;
+    padding: 12px 14px;
+    height: 46px;
+    line-height: 1.4;
+  }
+  .composer textarea:focus{
+    outline: none;
+    border-color: var(--brass);
+  }
+  .composer button{
+    background: var(--brass);
+    color: #1a1206;
+    border:none;
+    border-radius: 10px;
+    padding: 0 22px;
+    font-family:'Inter', sans-serif;
+    font-weight: 600;
+    font-size: 14px;
+    cursor:pointer;
+  }
+  .composer button:disabled{
+    opacity: .5;
+    cursor: default;
+  }
+  .composer button:focus-visible, textarea:focus-visible{
+    outline: 2px solid var(--brass);
+    outline-offset: 2px;
+  }
+
+  @media (max-width: 720px){
+    .rail{ display:none; }
+    .chat-scroll, .composer, .chat-header{ padding-left: 16px; padding-right: 16px; }
+  }
+</style>
+</head>
+<body>
+
+<aside class="rail">
+  <div class="brand">Кот</div>
+  <div class="brand-sub">персональный ИИ-ментор</div>
+
+  <div class="section-title">Сегодня</div>
+  <div id="events-box"><div class="rail-empty">Загрузка…</div></div>
+
+  <div class="section-title">Задачи</div>
+  <div id="tasks-box"><div class="rail-empty">Загрузка…</div></div>
+
+  <div class="section-title">Прогресс</div>
+  <div id="progress-box"><div class="rail-empty">Загрузка…</div></div>
+</aside>
+
+<main class="main">
+  <div class="chat-header">
+    <div class="status-dot" id="status-dot"></div>
+    <div class="header-text">
+      <div class="header-name">Кот на месте</div>
+      <div class="header-status" id="header-status">готов помочь</div>
+    </div>
+  </div>
+
+  <div class="chat-scroll" id="chat-scroll">
+    <div class="empty-state" id="empty-state">
+      Спросите про расписание, поставьте задачу или просто расскажите,
+      над чем сейчас работаете — Кот подхватит контекст сам.
+    </div>
+  </div>
+
+  <form class="composer" id="composer">
+    <textarea id="message-input" placeholder="Напишите сообщение…" autofocus></textarea>
+    <button type="submit" id="send-btn">Отправить</button>
+  </form>
+</main>
+
+<script>
+const chatScroll = document.getElementById('chat-scroll');
+const emptyState = document.getElementById('empty-state');
+const form = document.getElementById('composer');
+const input = document.getElementById('message-input');
+const sendBtn = document.getElementById('send-btn');
+const statusDot = document.getElementById('status-dot');
+const headerStatus = document.getElementById('header-status');
+
+function addMessage(role, text){
+  if (emptyState) emptyState.remove();
+  const el = document.createElement('div');
+  el.className = 'msg ' + role;
+  el.textContent = text;
+  chatScroll.appendChild(el);
+  chatScroll.scrollTop = chatScroll.scrollHeight;
+  return el;
+}
+
+async function loadHistory(){
+  try{
+    const res = await fetch('/api/history');
+    const data = await res.json();
+    if (data.messages && data.messages.length){
+      data.messages.forEach(m => addMessage(m.role, m.content));
+    }
+  }catch(e){ console.error(e); }
+}
+
+async function sendMessage(text){
+  addMessage('user', text);
+  sendBtn.disabled = true;
+  statusDot.classList.add('thinking');
+  headerStatus.textContent = 'думает…';
+  try{
+    const res = await fetch('/api/chat', {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({message: text})
+    });
+    const data = await res.json();
+    if (data.error){
+      addMessage('assistant', 'Ошибка: ' + data.error);
+    } else {
+      addMessage('assistant', data.reply);
+    }
+  }catch(e){
+    addMessage('assistant', 'Не удалось связаться с сервером: ' + e);
+  }finally{
+    sendBtn.disabled = false;
+    statusDot.classList.remove('thinking');
+    headerStatus.textContent = 'готов помочь';
+    refreshSidebar();
+  }
+}
+
+form.addEventListener('submit', (e) => {
+  e.preventDefault();
+  const text = input.value.trim();
+  if (!text) return;
+  input.value = '';
+  input.style.height = '46px';
+  sendMessage(text);
+});
+
+input.addEventListener('keydown', (e) => {
+  if (e.key === 'Enter' && !e.shiftKey){
+    e.preventDefault();
+    form.requestSubmit();
+  }
+});
+
+input.addEventListener('input', () => {
+  input.style.height = '46px';
+  input.style.height = Math.min(input.scrollHeight, 160) + 'px';
+});
+
+const monthsRu = {"01":"янв","02":"фев","03":"мар","04":"апр","05":"май","06":"июн",
+                   "07":"июл","08":"авг","09":"сен","10":"окт","11":"ноя","12":"дек"};
+
+function renderEvents(events){
+  const box = document.getElementById('events-box');
+  if (!events || !events.length){
+    box.innerHTML = '<div class="rail-empty">Событий нет</div>';
+    return;
+  }
+  box.innerHTML = events.map(ev => {
+    const [y,m,d] = ev.date.split('-');
+    return `<div class="rail-card"><span class="event-time">${d} ${monthsRu[m]}, ${ev.time}</span>${escapeHtml(ev.summary)}</div>`;
+  }).join('');
+}
+
+function renderTasks(tasks){
+  const box = document.getElementById('tasks-box');
+  if (!tasks || !tasks.length){
+    box.innerHTML = '<div class="rail-empty">Активных задач нет</div>';
+    return;
+  }
+  box.innerHTML = tasks.map(t => {
+    const due = t.due ? `<div class="task-due">до ${t.due.replace('T',' ').slice(0,16)}</div>` : '';
+    return `<div class="rail-card task-row">
+      <div class="task-dot ${t.priority}"></div>
+      <div><div>${escapeHtml(t.title)}</div>${due}</div>
+    </div>`;
+  }).join('');
+}
+
+function renderProgress(progress){
+  const box = document.getElementById('progress-box');
+  const topics = Object.keys(progress || {});
+  if (!topics.length){
+    box.innerHTML = '<div class="rail-empty">Пока нет данных</div>';
+    return;
+  }
+  box.innerHTML = topics.map(topic => {
+    const level = progress[topic].level || 0;
+    let dots = '';
+    for (let i=0;i<5;i++){
+      dots += i < level ? '●' : '<span class="empty">○</span>';
+    }
+    return `<div class="progress-row">
+      <div class="progress-top"><span class="progress-topic">${escapeHtml(topic)}</span></div>
+      <div class="progress-dots">${dots}</div>
+    </div>`;
+  }).join('');
+}
+
+function escapeHtml(str){
+  const div = document.createElement('div');
+  div.textContent = str;
+  return div.innerHTML;
+}
+
+async function refreshSidebar(){
+  try{
+    const res = await fetch('/api/state');
+    const data = await res.json();
+    renderEvents(data.events);
+    renderTasks(data.tasks);
+    renderProgress(data.progress);
+  }catch(e){ console.error(e); }
+}
+
+loadHistory();
+refreshSidebar();
+setInterval(refreshSidebar, 60000);
+</script>
+
+</body>
+</html>
