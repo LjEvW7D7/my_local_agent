@@ -59,7 +59,7 @@ playwright install chromium
 Чтобы агент мог подключаться к вашему календарю, необходимо создать проект в консоли разработчика Google:
 
 1. **Создание проекта**:
-   * Перейдите на [Google Cloud Console](https://google.com).
+   * Перейдите на [Google Cloud Console](https://console.cloud.google.com/).
    * Нажмите **Select a project** -> **New Project**, укажите имя (например, `Local-AI-Agent`) и нажмите **Create**.
 
 2. **Включение Calendar API**:
