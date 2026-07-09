@@ -6,6 +6,8 @@
 <title>Кот — ИИ-ментор</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/marked/12.0.2/marked.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/dompurify/3.1.5/purify.min.js"></script>
 <style>
   :root{
     --ink: #161c2b;
@@ -179,6 +181,77 @@
     letter-spacing: .08em;
     margin-bottom: 4px;
   }
+
+  /* ---------- Markdown внутри ответов ассистента ---------- */
+  .msg.assistant .md > *:first-child{ margin-top:0; }
+  .msg.assistant .md > *:last-child{ margin-bottom:0; }
+  .msg.assistant .md p{ margin: 0 0 10px; }
+  .msg.assistant .md ul,
+  .msg.assistant .md ol{ margin: 0 0 10px; padding-left: 22px; }
+  .msg.assistant .md li{ margin-bottom: 4px; }
+  .msg.assistant .md li > p{ margin: 0; }
+  .msg.assistant .md h1,
+  .msg.assistant .md h2,
+  .msg.assistant .md h3{
+    font-family:'Inter', sans-serif;
+    font-weight:600;
+    line-height:1.3;
+    margin: 16px 0 8px;
+  }
+  .msg.assistant .md h1{ font-size: 18px; }
+  .msg.assistant .md h2{ font-size: 16px; }
+  .msg.assistant .md h3{ font-size: 14.5px; }
+  .msg.assistant .md strong{ color: var(--paper); font-weight:600; }
+  .msg.assistant .md em{ font-style: italic; }
+  .msg.assistant .md a{ color: var(--brass); text-decoration: underline; text-underline-offset: 2px; }
+  .msg.assistant .md blockquote{
+    margin: 0 0 10px;
+    padding: 4px 12px;
+    border-left: 3px solid var(--brass);
+    color: var(--fog);
+    font-style: italic;
+  }
+  .msg.assistant .md code{
+    font-family:'JetBrains Mono', monospace;
+    font-size: 13px;
+    background: var(--panel-2);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 1px 5px;
+  }
+  .msg.assistant .md pre{
+    background: var(--panel-2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 12px 14px;
+    overflow-x: auto;
+    margin: 0 0 10px;
+  }
+  .msg.assistant .md pre code{
+    background: none;
+    border: none;
+    padding: 0;
+    font-size: 12.5px;
+    line-height: 1.5;
+  }
+  .msg.assistant .md hr{
+    border: none;
+    border-top: 1px solid var(--border);
+    margin: 14px 0;
+  }
+  .msg.assistant .md table{
+    border-collapse: collapse;
+    width: 100%;
+    margin: 0 0 10px;
+    font-size: 13px;
+  }
+  .msg.assistant .md th,
+  .msg.assistant .md td{
+    border: 1px solid var(--border);
+    padding: 6px 10px;
+    text-align: left;
+  }
+  .msg.assistant .md th{ background: var(--panel-2); }
   .empty-state{
     margin: auto;
     text-align:center;
@@ -284,11 +357,36 @@ const sendBtn = document.getElementById('send-btn');
 const statusDot = document.getElementById('status-dot');
 const headerStatus = document.getElementById('header-status');
 
+// Настройки marked: переносы строк как <br>, безопасные ссылки
+marked.setOptions({ breaks: true, gfm: true });
+
+function renderMarkdown(text){
+  const rawHtml = marked.parse(text || '');
+  const cleanHtml = DOMPurify.sanitize(rawHtml, {
+    ADD_ATTR: ['target', 'rel']
+  });
+  // Открываем ссылки в новой вкладке
+  const wrapper = document.createElement('div');
+  wrapper.innerHTML = cleanHtml;
+  wrapper.querySelectorAll('a').forEach(a => {
+    a.setAttribute('target', '_blank');
+    a.setAttribute('rel', 'noopener noreferrer');
+  });
+  return wrapper.innerHTML;
+}
+
 function addMessage(role, text){
   if (emptyState) emptyState.remove();
   const el = document.createElement('div');
   el.className = 'msg ' + role;
-  el.textContent = text;
+  if (role === 'assistant'){
+    const md = document.createElement('div');
+    md.className = 'md';
+    md.innerHTML = renderMarkdown(text);
+    el.appendChild(md);
+  } else {
+    el.textContent = text;
+  }
   chatScroll.appendChild(el);
   chatScroll.scrollTop = chatScroll.scrollHeight;
   return el;
