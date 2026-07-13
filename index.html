@@ -1,525 +1,1843 @@
 <!DOCTYPE html>
 <html lang="ru">
+
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Кот — ИИ-ментор</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
-<script src="https://cdnjs.cloudflare.com/ajax/libs/marked/12.0.2/marked.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/dompurify/3.1.5/purify.min.js"></script>
-<style>
-  :root{
-    --ink: #161c2b;
-    --panel: #1f2740;
-    --panel-2: #253052;
-    --brass: #c98a3e;
-    --brass-glow: rgba(201,138,62,.35);
-    --sage: #7ea896;
-    --rose: #c96a6a;
-    --fog: #8b93ab;
-    --paper: #eef1f8;
-    --border: #2c3654;
-  }
-  *{ box-sizing: border-box; }
-  html,body{ height:100%; margin:0; }
-  body{
-    background: var(--ink);
-    color: var(--paper);
-    font-family: 'Inter', sans-serif;
-    display:flex;
-    overflow:hidden;
-  }
-  /* ---------- Боковая панель ---------- */
-  .rail{
-    width: 300px;
-    min-width: 300px;
-    background: var(--panel);
-    border-right: 1px solid var(--border);
-    display:flex;
-    flex-direction:column;
-    padding: 22px 18px;
-    overflow-y:auto;
-  }
-  .brand{
-    font-family:'Source Serif 4', serif;
-    font-size: 22px;
-    font-weight:600;
-    letter-spacing: .01em;
-    margin-bottom: 4px;
-  }
-  .brand-sub{
-    font-size: 12px;
-    color: var(--fog);
-    margin-bottom: 26px;
-  }
-  .section-title{
-    font-size: 11px;
-    text-transform: uppercase;
-    letter-spacing: .12em;
-    color: var(--fog);
-    margin: 22px 0 10px;
-  }
-  .section-title:first-of-type{ margin-top:0; }
-  .rail-card{
-    background: var(--panel-2);
-    border: 1px solid var(--border);
-    border-radius: 10px;
-    padding: 10px 12px;
-    margin-bottom: 8px;
-    font-size: 13px;
-    line-height: 1.4;
-  }
-  .rail-empty{
-    color: var(--fog);
-    font-size: 13px;
-    font-style: italic;
-    padding: 4px 2px;
-  }
-  .event-time{
-    font-family:'JetBrains Mono', monospace;
-    color: var(--brass);
-    font-size: 12px;
-    margin-right: 8px;
-  }
-  .task-row{ display:flex; align-items:flex-start; gap:8px; }
-  .task-dot{
-    width:8px; height:8px; border-radius:50%;
-    margin-top:5px; flex-shrink:0;
-    background: var(--fog);
-  }
-  .task-dot.high{ background: var(--rose); }
-  .task-dot.normal{ background: var(--brass); }
-  .task-dot.low{ background: var(--fog); }
-  .task-due{ color: var(--fog); font-size: 11px; font-family:'JetBrains Mono', monospace; }
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Кот — ИИ-ментор</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link
+    href="https://fonts.googleapis.com/css2?family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap"
+    rel="stylesheet">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/marked/12.0.2/marked.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/dompurify/3.1.5/purify.min.js"></script>
+  <style>
+    :root {
+      --ink: #161c2b;
+      --panel: #1f2740;
+      --panel-2: #253052;
+      --brass: #c98a3e;
+      --brass-glow: rgba(201, 138, 62, .35);
+      --sage: #7ea896;
+      --rose: #c96a6a;
+      --fog: #8b93ab;
+      --paper: #eef1f8;
+      --border: #2c3654;
+    }
 
-  .progress-row{ margin-bottom: 12px; }
-  .progress-top{ display:flex; justify-content:space-between; font-size:13px; margin-bottom:4px; }
-  .progress-topic{ color: var(--paper); }
-  .progress-dots{ font-family:'JetBrains Mono', monospace; letter-spacing: 2px; color: var(--brass); font-size: 13px; }
-  .progress-dots .empty{ color: var(--border); }
+    * {
+      box-sizing: border-box;
+    }
 
-  /* ---------- Основная область ---------- */
-  .main{
-    flex:1;
-    display:flex;
-    flex-direction:column;
-    height:100vh;
-    position:relative;
-  }
-  .chat-header{
-    padding: 20px 32px;
-    border-bottom: 1px solid var(--border);
-    display:flex;
-    align-items:center;
-    gap: 14px;
-    position:relative;
-    overflow:hidden;
-  }
-  /* Сигнатурный элемент: тёплое свечение настольной лампы за статусом ментора */
-  .chat-header::before{
-    content:"";
-    position:absolute;
-    top:-60px; left:-40px;
-    width:220px; height:220px;
-    background: radial-gradient(circle, var(--brass-glow) 0%, transparent 70%);
-    pointer-events:none;
-  }
-  .status-dot{
-    width:10px; height:10px;
-    border-radius:50%;
-    background: var(--brass);
-    box-shadow: 0 0 10px 2px var(--brass-glow);
-    animation: breathe 3s ease-in-out infinite;
-    z-index:1;
-  }
-  .status-dot.thinking{ animation: breathe 0.8s ease-in-out infinite; }
-  @keyframes breathe{
-    0%,100%{ opacity:1; }
-    50%{ opacity:.4; }
-  }
-  .header-text{ z-index:1; }
-  .header-name{ font-family:'Source Serif 4', serif; font-size:19px; font-weight:600; }
-  .header-status{ font-size:12px; color: var(--fog); }
+    html,
+    body {
+      height: 100%;
+      margin: 0;
+    }
 
-  .chat-scroll{
-    flex:1;
-    overflow-y:auto;
-    padding: 28px 32px;
-    display:flex;
-    flex-direction:column;
-    gap: 16px;
-  }
-  .msg{
-    max-width: 640px;
-    padding: 12px 16px;
-    border-radius: 12px;
-    font-size: 14.5px;
-    line-height: 1.55;
-    white-space: pre-wrap;
-  }
-  .msg.user{
-    align-self:flex-end;
-    background: var(--brass);
-    color: #1a1206;
-    border-bottom-right-radius: 3px;
-  }
-  .msg.assistant{
-    align-self:flex-start;
-    background: var(--panel);
-    border: 1px solid var(--border);
-    border-bottom-left-radius: 3px;
-    font-family: 'Source Serif 4', serif;
-  }
-  .msg.assistant::before{
-    content: "Кот";
-    display:block;
-    font-family: 'Inter', sans-serif;
-    font-size: 11px;
-    color: var(--brass);
-    text-transform: uppercase;
-    letter-spacing: .08em;
-    margin-bottom: 4px;
-  }
+    body {
+      background: var(--ink);
+      color: var(--paper);
+      font-family: 'Inter', sans-serif;
+      display: flex;
+      overflow: hidden;
+    }
 
-  /* ---------- Markdown внутри ответов ассистента ---------- */
-  .msg.assistant .md > *:first-child{ margin-top:0; }
-  .msg.assistant .md > *:last-child{ margin-bottom:0; }
-  .msg.assistant .md p{ margin: 0 0 10px; }
-  .msg.assistant .md ul,
-  .msg.assistant .md ol{ margin: 0 0 10px; padding-left: 22px; }
-  .msg.assistant .md li{ margin-bottom: 4px; }
-  .msg.assistant .md li > p{ margin: 0; }
-  .msg.assistant .md h1,
-  .msg.assistant .md h2,
-  .msg.assistant .md h3{
-    font-family:'Inter', sans-serif;
-    font-weight:600;
-    line-height:1.3;
-    margin: 16px 0 8px;
-  }
-  .msg.assistant .md h1{ font-size: 18px; }
-  .msg.assistant .md h2{ font-size: 16px; }
-  .msg.assistant .md h3{ font-size: 14.5px; }
-  .msg.assistant .md strong{ color: var(--paper); font-weight:600; }
-  .msg.assistant .md em{ font-style: italic; }
-  .msg.assistant .md a{ color: var(--brass); text-decoration: underline; text-underline-offset: 2px; }
-  .msg.assistant .md blockquote{
-    margin: 0 0 10px;
-    padding: 4px 12px;
-    border-left: 3px solid var(--brass);
-    color: var(--fog);
-    font-style: italic;
-  }
-  .msg.assistant .md code{
-    font-family:'JetBrains Mono', monospace;
-    font-size: 13px;
-    background: var(--panel-2);
-    border: 1px solid var(--border);
-    border-radius: 4px;
-    padding: 1px 5px;
-  }
-  .msg.assistant .md pre{
-    background: var(--panel-2);
-    border: 1px solid var(--border);
-    border-radius: 8px;
-    padding: 12px 14px;
-    overflow-x: auto;
-    margin: 0 0 10px;
-  }
-  .msg.assistant .md pre code{
-    background: none;
-    border: none;
-    padding: 0;
-    font-size: 12.5px;
-    line-height: 1.5;
-  }
-  .msg.assistant .md hr{
-    border: none;
-    border-top: 1px solid var(--border);
-    margin: 14px 0;
-  }
-  .msg.assistant .md table{
-    border-collapse: collapse;
-    width: 100%;
-    margin: 0 0 10px;
-    font-size: 13px;
-  }
-  .msg.assistant .md th,
-  .msg.assistant .md td{
-    border: 1px solid var(--border);
-    padding: 6px 10px;
-    text-align: left;
-  }
-  .msg.assistant .md th{ background: var(--panel-2); }
-  .empty-state{
-    margin: auto;
-    text-align:center;
-    color: var(--fog);
-    font-family:'Source Serif 4', serif;
-    font-size: 16px;
-    max-width: 380px;
-  }
+    /* ---------- Боковая панель ---------- */
+    .rail {
+      width: 300px;
+      min-width: 300px;
+      background: var(--panel);
+      border-right: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      padding: 22px 18px;
+      overflow-y: auto;
+    }
 
-  .composer{
-    padding: 18px 32px 26px;
-    border-top: 1px solid var(--border);
-    display:flex;
-    gap: 10px;
-  }
-  .composer textarea{
-    flex:1;
-    resize:none;
-    background: var(--panel-2);
-    border: 1px solid var(--border);
-    border-radius: 10px;
-    color: var(--paper);
-    font-family:'Inter', sans-serif;
-    font-size: 14px;
-    padding: 12px 14px;
-    height: 46px;
-    line-height: 1.4;
-  }
-  .composer textarea:focus{
-    outline: none;
-    border-color: var(--brass);
-  }
-  .composer button{
-    background: var(--brass);
-    color: #1a1206;
-    border:none;
-    border-radius: 10px;
-    padding: 0 22px;
-    font-family:'Inter', sans-serif;
-    font-weight: 600;
-    font-size: 14px;
-    cursor:pointer;
-  }
-  .composer button:disabled{
-    opacity: .5;
-    cursor: default;
-  }
-  .composer button:focus-visible, textarea:focus-visible{
-    outline: 2px solid var(--brass);
-    outline-offset: 2px;
-  }
+    .brand {
+      font-family: 'Source Serif 4', serif;
+      font-size: 22px;
+      font-weight: 600;
+      letter-spacing: .01em;
+      margin-bottom: 4px;
+    }
 
-  @media (max-width: 720px){
-    .rail{ display:none; }
-    .chat-scroll, .composer, .chat-header{ padding-left: 16px; padding-right: 16px; }
-  }
-</style>
+    .brand-sub {
+      font-size: 12px;
+      color: var(--fog);
+      margin-bottom: 26px;
+    }
+
+    .section-title {
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: .12em;
+      color: var(--fog);
+      margin: 22px 0 10px;
+    }
+
+    .section-title:first-of-type {
+      margin-top: 0;
+    }
+
+    .rail-card {
+      background: var(--panel-2);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 10px 12px;
+      margin-bottom: 8px;
+      font-size: 13px;
+      line-height: 1.4;
+    }
+
+    .rail-empty {
+      color: var(--fog);
+      font-size: 13px;
+      font-style: italic;
+      padding: 4px 2px;
+    }
+
+    .event-time {
+      font-family: 'JetBrains Mono', monospace;
+      color: var(--brass);
+      font-size: 12px;
+      margin-right: 8px;
+    }
+
+    .task-row {
+      display: flex;
+      align-items: flex-start;
+      gap: 8px;
+    }
+
+    .task-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      margin-top: 5px;
+      flex-shrink: 0;
+      background: var(--fog);
+    }
+
+    .task-dot.high {
+      background: var(--rose);
+    }
+
+    .task-dot.normal {
+      background: var(--brass);
+    }
+
+    .task-dot.low {
+      background: var(--fog);
+    }
+
+    .task-due {
+      color: var(--fog);
+      font-size: 11px;
+      font-family: 'JetBrains Mono', monospace;
+    }
+
+    .progress-row {
+      margin-bottom: 12px;
+    }
+
+    .progress-top {
+      display: flex;
+      justify-content: space-between;
+      font-size: 13px;
+      margin-bottom: 4px;
+    }
+
+    .progress-topic {
+      color: var(--paper);
+    }
+
+    .progress-dots {
+      font-family: 'JetBrains Mono', monospace;
+      letter-spacing: 2px;
+      color: var(--brass);
+      font-size: 13px;
+    }
+
+    .progress-dots .empty {
+      color: var(--border);
+    }
+
+    .points-bar-track {
+      height: 4px;
+      background: var(--border);
+      border-radius: 3px;
+      overflow: hidden;
+      margin-top: 5px;
+    }
+
+    .points-bar-fill {
+      height: 100%;
+      background: var(--sage);
+      border-radius: 3px;
+    }
+
+    .progress-meta {
+      display: flex;
+      justify-content: space-between;
+      font-size: 10.5px;
+      color: var(--fog);
+      margin-top: 3px;
+      font-family: 'JetBrains Mono', monospace;
+    }
+
+    /* ---------- Еженедельный отчёт ---------- */
+    .report-card {
+      background: var(--panel-2);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 10px 12px;
+      font-size: 12.5px;
+      line-height: 1.5;
+      max-height: 220px;
+      overflow-y: auto;
+      color: var(--paper);
+    }
+
+    .report-card h1,
+    .report-card h2,
+    .report-card h3 {
+      font-size: 12.5px;
+      margin: 6px 0 3px;
+      color: var(--brass);
+    }
+
+    .report-card ul {
+      margin: 0 0 6px;
+      padding-left: 16px;
+    }
+
+    .report-card p {
+      margin: 0 0 6px;
+    }
+
+    .report-card li {
+      margin-bottom: 3px;
+    }
+
+    .report-meta {
+      font-size: 10.5px;
+      color: var(--fog);
+      margin-bottom: 6px;
+      font-family: 'JetBrains Mono', monospace;
+    }
+
+    .report-btn {
+      width: 100%;
+      margin-top: 8px;
+      background: var(--panel-2);
+      border: 1px solid var(--border);
+      color: var(--paper);
+      border-radius: 8px;
+      padding: 8px 10px;
+      font-size: 12.5px;
+      font-family: 'Inter', sans-serif;
+      cursor: pointer;
+    }
+
+    .report-btn:hover {
+      border-color: var(--brass);
+    }
+
+    .report-btn:disabled {
+      opacity: .5;
+      cursor: default;
+    }
+
+    /* ---------- Блок главной цели (обратный отсчёт до переезда) ---------- */
+    .goal-card {
+      background: linear-gradient(160deg, var(--panel-2) 0%, var(--panel) 100%);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 14px 14px 16px;
+      margin-bottom: 4px;
+    }
+
+    .goal-countdown {
+      display: flex;
+      align-items: baseline;
+      gap: 6px;
+      margin-bottom: 2px;
+    }
+
+    .goal-days {
+      font-family: 'Source Serif 4', serif;
+      font-size: 30px;
+      font-weight: 600;
+      color: var(--brass);
+      line-height: 1;
+    }
+
+    .goal-days-label {
+      font-size: 12px;
+      color: var(--fog);
+    }
+
+    .goal-sub {
+      font-size: 12px;
+      color: var(--fog);
+      margin-bottom: 12px;
+    }
+
+    .goal-sub b {
+      color: var(--paper);
+      font-weight: 600;
+    }
+
+    .goal-urgent .goal-days {
+      color: var(--rose);
+    }
+
+    .milestone-row {
+      margin-bottom: 10px;
+    }
+
+    .milestone-row:last-child {
+      margin-bottom: 0;
+    }
+
+    .milestone-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      font-size: 12.5px;
+      margin-bottom: 4px;
+    }
+
+    .milestone-topic {
+      color: var(--paper);
+      font-weight: 500;
+    }
+
+    .milestone-target {
+      color: var(--fog);
+      font-size: 11px;
+    }
+
+    .milestone-bar-track {
+      height: 6px;
+      background: var(--border);
+      border-radius: 4px;
+      overflow: hidden;
+    }
+
+    .milestone-bar-fill {
+      height: 100%;
+      background: var(--sage);
+      border-radius: 4px;
+    }
+
+    .milestone-row.behind .milestone-bar-fill {
+      background: var(--rose);
+    }
+
+    .milestone-due {
+      font-size: 11px;
+      color: var(--fog);
+      margin-top: 3px;
+      font-family: 'JetBrains Mono', monospace;
+    }
+
+    /* ---------- Основная область ---------- */
+    .main {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+      position: relative;
+    }
+
+    .chat-header {
+      padding: 20px 32px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    /* Сигнатурный элемент: тёплое свечение настольной лампы за статусом ментора */
+    .chat-header::before {
+      content: "";
+      position: absolute;
+      top: -60px;
+      left: -40px;
+      width: 220px;
+      height: 220px;
+      background: radial-gradient(circle, var(--brass-glow) 0%, transparent 70%);
+      pointer-events: none;
+    }
+
+    .status-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: var(--brass);
+      box-shadow: 0 0 10px 2px var(--brass-glow);
+      animation: breathe 3s ease-in-out infinite;
+      z-index: 1;
+    }
+
+    .status-dot.thinking {
+      animation: breathe 0.8s ease-in-out infinite;
+    }
+
+    @keyframes breathe {
+
+      0%,
+      100% {
+        opacity: 1;
+      }
+
+      50% {
+        opacity: .4;
+      }
+    }
+
+    .header-text {
+      z-index: 1;
+    }
+
+    .header-name {
+      font-family: 'Source Serif 4', serif;
+      font-size: 19px;
+      font-weight: 600;
+    }
+
+    .header-status {
+      font-size: 12px;
+      color: var(--fog);
+    }
+
+    .chat-scroll {
+      flex: 1;
+      overflow-y: auto;
+      padding: 28px 32px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .msg {
+      max-width: 640px;
+      padding: 12px 16px;
+      border-radius: 12px;
+      font-size: 14.5px;
+      line-height: 1.55;
+      white-space: pre-wrap;
+    }
+
+    .msg.user {
+      align-self: flex-end;
+      background: var(--brass);
+      color: #1a1206;
+      border-bottom-right-radius: 3px;
+    }
+
+    .msg.assistant {
+      align-self: flex-start;
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-bottom-left-radius: 3px;
+      font-family: 'Source Serif 4', serif;
+    }
+
+    .msg.assistant::before {
+      content: "Кот";
+      display: block;
+      font-family: 'Inter', sans-serif;
+      font-size: 11px;
+      color: var(--brass);
+      text-transform: uppercase;
+      letter-spacing: .08em;
+      margin-bottom: 4px;
+    }
+
+    /* ---------- Markdown внутри ответов ассистента ---------- */
+    .msg.assistant .md>*:first-child {
+      margin-top: 0;
+    }
+
+    .msg.assistant .md>*:last-child {
+      margin-bottom: 0;
+    }
+
+    .msg.assistant .md p {
+      margin: 0 0 10px;
+    }
+
+    .msg.assistant .md ul,
+    .msg.assistant .md ol {
+      margin: 0 0 10px;
+      padding-left: 22px;
+    }
+
+    .msg.assistant .md li {
+      margin-bottom: 4px;
+    }
+
+    .msg.assistant .md li>p {
+      margin: 0;
+    }
+
+    .msg.assistant .md h1,
+    .msg.assistant .md h2,
+    .msg.assistant .md h3 {
+      font-family: 'Inter', sans-serif;
+      font-weight: 600;
+      line-height: 1.3;
+      margin: 16px 0 8px;
+    }
+
+    .msg.assistant .md h1 {
+      font-size: 18px;
+    }
+
+    .msg.assistant .md h2 {
+      font-size: 16px;
+    }
+
+    .msg.assistant .md h3 {
+      font-size: 14.5px;
+    }
+
+    .msg.assistant .md strong {
+      color: var(--paper);
+      font-weight: 600;
+    }
+
+    .msg.assistant .md em {
+      font-style: italic;
+    }
+
+    .msg.assistant .md a {
+      color: var(--brass);
+      text-decoration: underline;
+      text-underline-offset: 2px;
+    }
+
+    .msg.assistant .md blockquote {
+      margin: 0 0 10px;
+      padding: 4px 12px;
+      border-left: 3px solid var(--brass);
+      color: var(--fog);
+      font-style: italic;
+    }
+
+    .msg.assistant .md code {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 13px;
+      background: var(--panel-2);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      padding: 1px 5px;
+    }
+
+    .msg.assistant .md pre {
+      background: var(--panel-2);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 12px 14px;
+      overflow-x: auto;
+      margin: 0 0 10px;
+    }
+
+    .msg.assistant .md pre code {
+      background: none;
+      border: none;
+      padding: 0;
+      font-size: 12.5px;
+      line-height: 1.5;
+    }
+
+    .msg.assistant .md hr {
+      border: none;
+      border-top: 1px solid var(--border);
+      margin: 14px 0;
+    }
+
+    .msg.assistant .md table {
+      border-collapse: collapse;
+      width: 100%;
+      margin: 0 0 10px;
+      font-size: 13px;
+    }
+
+    .msg.assistant .md th,
+    .msg.assistant .md td {
+      border: 1px solid var(--border);
+      padding: 6px 10px;
+      text-align: left;
+    }
+
+    .msg.assistant .md th {
+      background: var(--panel-2);
+    }
+
+    .empty-state {
+      margin: auto;
+      text-align: center;
+      color: var(--fog);
+      font-family: 'Source Serif 4', serif;
+      font-size: 16px;
+      max-width: 380px;
+    }
+
+    .composer {
+      padding: 14px 32px 22px;
+      border-top: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .composer-row {
+      display: flex;
+      gap: 10px;
+      align-items: flex-end;
+    }
+
+    .icon-btn {
+      background: var(--panel-2);
+      border: 1px solid var(--border);
+      color: var(--paper);
+      border-radius: 10px;
+      width: 46px;
+      height: 46px;
+      flex-shrink: 0;
+      font-size: 17px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .icon-btn:hover {
+      border-color: var(--brass);
+    }
+
+    .attach-chip {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      align-self: flex-start;
+      background: var(--panel-2);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 6px 8px 6px 12px;
+      font-size: 12.5px;
+      color: var(--paper);
+      max-width: 100%;
+    }
+
+    .attach-chip-name {
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      max-width: 260px;
+    }
+
+    .attach-chip button {
+      background: none;
+      border: none;
+      color: var(--fog);
+      cursor: pointer;
+      font-size: 13px;
+      line-height: 1;
+      padding: 2px;
+    }
+
+    .attach-chip button:hover {
+      color: var(--rose);
+    }
+
+    .composer textarea {
+      flex: 1;
+      resize: none;
+      background: var(--panel-2);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      color: var(--paper);
+      font-family: 'Inter', sans-serif;
+      font-size: 14px;
+      padding: 12px 14px;
+      height: 46px;
+      line-height: 1.4;
+    }
+
+    .composer textarea:focus {
+      outline: none;
+      border-color: var(--brass);
+    }
+
+    .composer button[type="submit"] {
+      background: var(--brass);
+      color: #1a1206;
+      border: none;
+      border-radius: 10px;
+      padding: 0 22px;
+      font-family: 'Inter', sans-serif;
+      font-weight: 600;
+      font-size: 14px;
+      cursor: pointer;
+    }
+
+    .composer button:disabled {
+      opacity: .5;
+      cursor: default;
+    }
+
+    .composer button:focus-visible,
+    textarea:focus-visible {
+      outline: 2px solid var(--brass);
+      outline-offset: 2px;
+    }
+
+    @media (max-width: 720px) {
+      .rail {
+        display: none;
+      }
+
+      .chat-scroll,
+      .composer,
+      .chat-header {
+        padding-left: 16px;
+        padding-right: 16px;
+      }
+    }
+
+    /* ---------- Удаление сообщений / очистка чата ---------- */
+    .msg {
+      position: relative;
+    }
+
+    .msg .msg-delete {
+      position: absolute;
+      top: -8px;
+      right: -8px;
+      width: 20px;
+      height: 20px;
+      border-radius: 50%;
+      background: var(--panel-2);
+      border: 1px solid var(--border);
+      color: var(--fog);
+      font-size: 11px;
+      line-height: 1;
+      cursor: pointer;
+      display: none;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .msg.user .msg-delete {
+      right: auto;
+      left: -8px;
+    }
+
+    .msg:hover .msg-delete {
+      display: flex;
+    }
+
+    .msg .msg-delete:hover {
+      color: var(--rose);
+      border-color: var(--rose);
+    }
+
+    .header-actions {
+      margin-left: auto;
+      display: flex;
+      gap: 8px;
+      z-index: 1;
+    }
+
+    .header-icon-btn {
+      background: var(--panel-2);
+      border: 1px solid var(--border);
+      color: var(--fog);
+      border-radius: 8px;
+      width: 34px;
+      height: 34px;
+      cursor: pointer;
+      font-size: 14px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .header-icon-btn:hover {
+      border-color: var(--brass);
+      color: var(--paper);
+    }
+
+    .header-icon-btn.active {
+      color: var(--sage);
+      border-color: var(--sage);
+    }
+
+    /* ---------- Статус-строка "что сейчас делает агент" ---------- */
+    .status-line {
+      align-self: flex-start;
+      font-size: 12.5px;
+      color: var(--fog);
+      font-style: italic;
+      padding: 2px 4px;
+    }
+
+    /* ---------- Подтверждение деструктивных действий ---------- */
+    .confirm-box {
+      align-self: flex-start;
+      max-width: 640px;
+      background: var(--panel);
+      border: 1px solid var(--rose);
+      border-radius: 10px;
+      padding: 10px 14px;
+      font-size: 13.5px;
+    }
+
+    .confirm-box ul {
+      margin: 6px 0 10px;
+      padding-left: 18px;
+    }
+
+    .confirm-actions {
+      display: flex;
+      gap: 8px;
+    }
+
+    .confirm-actions button {
+      border-radius: 8px;
+      padding: 6px 14px;
+      font-size: 13px;
+      cursor: pointer;
+      border: 1px solid var(--border);
+      font-family: 'Inter', sans-serif;
+    }
+
+    .confirm-btn-yes {
+      background: var(--rose);
+      color: #241010;
+      border: none;
+    }
+
+    .confirm-btn-no {
+      background: var(--panel-2);
+      color: var(--paper);
+    }
+
+    .confirm-box.done {
+      opacity: .55;
+      border-color: var(--border);
+    }
+
+    /* ---------- Заметки памяти в сайдбаре ---------- */
+    .note-card {
+      background: var(--panel-2);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 8px 10px;
+      margin-bottom: 6px;
+      font-size: 12px;
+      line-height: 1.4;
+    }
+
+    .note-tags {
+      margin-top: 3px;
+      color: var(--brass);
+      font-size: 10.5px;
+    }
+
+    /* ---------- Спарклайн прогресса ---------- */
+    .progress-sparkline {
+      margin-top: 4px;
+      display: block;
+    }
+
+    .progress-sparkline polyline {
+      fill: none;
+      stroke: var(--sage);
+      stroke-width: 1.5;
+    }
+
+    /* ---------- Редактирование вехи ---------- */
+    .milestone-edit-btn {
+      background: none;
+      border: none;
+      color: var(--fog);
+      cursor: pointer;
+      font-size: 11px;
+      padding: 0 0 0 6px;
+    }
+
+    .milestone-edit-btn:hover {
+      color: var(--brass);
+    }
+
+    /* ---------- Roadmap (промежуточные цели) ---------- */
+    .roadmap-topic-block {
+      margin-bottom: 12px;
+    }
+
+    .roadmap-topic-block:last-child {
+      margin-bottom: 0;
+    }
+
+    .roadmap-topic-title {
+      font-size: 12px;
+      color: var(--paper);
+      font-weight: 500;
+      margin-bottom: 6px;
+    }
+
+    .roadmap-track {
+      display: flex;
+      align-items: center;
+      gap: 2px;
+    }
+
+    .roadmap-cp {
+      flex: 1;
+      text-align: center;
+      cursor: pointer;
+      padding: 4px 2px 6px;
+      border-radius: 6px;
+      border: 1px solid transparent;
+    }
+
+    .roadmap-cp:hover {
+      border-color: var(--border);
+      background: var(--panel-2);
+    }
+
+    .roadmap-cp-dot {
+      width: 9px;
+      height: 9px;
+      border-radius: 50%;
+      margin: 0 auto 4px;
+      background: var(--border);
+    }
+
+    .roadmap-cp.done .roadmap-cp-dot {
+      background: var(--sage);
+    }
+
+    .roadmap-cp.overdue .roadmap-cp-dot {
+      background: var(--rose);
+    }
+
+    .roadmap-cp-label {
+      font-size: 9.5px;
+      color: var(--fog);
+      text-transform: uppercase;
+      letter-spacing: 0.03em;
+    }
+
+    .roadmap-cp-desc {
+      font-size: 9.5px;
+      color: var(--fog);
+      margin-top: 2px;
+      line-height: 1.25;
+    }
+
+    /* ---------- Obsidian ---------- */
+    .obsidian-box input[type="text"] {
+      width: 100%;
+      box-sizing: border-box;
+      background: var(--panel-2);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      color: var(--paper);
+      font-size: 11.5px;
+      padding: 6px 8px;
+      margin-bottom: 6px;
+    }
+
+    .obsidian-box button {
+      width: 100%;
+      background: var(--panel-2);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      color: var(--paper);
+      font-size: 11.5px;
+      padding: 6px 8px;
+      cursor: pointer;
+    }
+
+    .obsidian-box button:hover {
+      border-color: var(--brass);
+      color: var(--brass);
+    }
+
+    .obsidian-status {
+      font-size: 11px;
+      color: var(--fog);
+      margin-bottom: 6px;
+      word-break: break-all;
+    }
+
+    .obsidian-status.connected {
+      color: var(--sage);
+    }
+  </style>
 </head>
+
 <body>
 
-<aside class="rail">
-  <div class="brand">Кот</div>
-  <div class="brand-sub">персональный ИИ-ментор</div>
+  <aside class="rail">
+    <div class="brand">Кот</div>
+    <div class="brand-sub">персональный ИИ-ментор</div>
 
-  <div class="section-title">Сегодня</div>
-  <div id="events-box"><div class="rail-empty">Загрузка…</div></div>
-
-  <div class="section-title">Задачи</div>
-  <div id="tasks-box"><div class="rail-empty">Загрузка…</div></div>
-
-  <div class="section-title">Прогресс</div>
-  <div id="progress-box"><div class="rail-empty">Загрузка…</div></div>
-</aside>
-
-<main class="main">
-  <div class="chat-header">
-    <div class="status-dot" id="status-dot"></div>
-    <div class="header-text">
-      <div class="header-name">Кот на месте</div>
-      <div class="header-status" id="header-status">готов помочь</div>
+    <div class="section-title" style="margin-top:0;">Модель</div>
+    <div id="model-box">
+      <select id="model-select" disabled style="width:100%; box-sizing:border-box;">
+        <option>Загрузка…</option>
+      </select>
+      <div id="model-hint" class="rail-empty" style="margin-top:4px;"></div>
     </div>
-  </div>
 
-  <div class="chat-scroll" id="chat-scroll">
-    <div class="empty-state" id="empty-state">
-      Спросите про расписание, поставьте задачу или просто расскажите,
-      над чем сейчас работаете — Кот подхватит контекст сам.
+    <div class="section-title">Цель: переезд</div>
+    <div id="goal-box">
+      <div class="rail-empty">Загрузка…</div>
     </div>
-  </div>
 
-  <form class="composer" id="composer">
-    <textarea id="message-input" placeholder="Напишите сообщение…" autofocus></textarea>
-    <button type="submit" id="send-btn">Отправить</button>
-  </form>
-</main>
+    <div class="section-title">Roadmap (неделя / месяц / квартал / полгода / год)</div>
+    <div id="roadmap-box">
+      <div class="rail-empty">Загрузка…</div>
+    </div>
 
-<script>
-const chatScroll = document.getElementById('chat-scroll');
-const emptyState = document.getElementById('empty-state');
-const form = document.getElementById('composer');
-const input = document.getElementById('message-input');
-const sendBtn = document.getElementById('send-btn');
-const statusDot = document.getElementById('status-dot');
-const headerStatus = document.getElementById('header-status');
+    <div class="section-title">Obsidian</div>
+    <div id="obsidian-box" class="obsidian-box">
+      <div class="rail-empty">Загрузка…</div>
+    </div>
 
-// Настройки marked: переносы строк как <br>, безопасные ссылки
-marked.setOptions({ breaks: true, gfm: true });
+    <div class="section-title">Сегодня</div>
+    <div id="events-box">
+      <div class="rail-empty">Загрузка…</div>
+    </div>
 
-function renderMarkdown(text){
-  const rawHtml = marked.parse(text || '');
-  const cleanHtml = DOMPurify.sanitize(rawHtml, {
-    ADD_ATTR: ['target', 'rel']
-  });
-  // Открываем ссылки в новой вкладке
-  const wrapper = document.createElement('div');
-  wrapper.innerHTML = cleanHtml;
-  wrapper.querySelectorAll('a').forEach(a => {
-    a.setAttribute('target', '_blank');
-    a.setAttribute('rel', 'noopener noreferrer');
-  });
-  return wrapper.innerHTML;
-}
+    <div class="section-title">Задачи</div>
+    <div id="tasks-box">
+      <div class="rail-empty">Загрузка…</div>
+    </div>
 
-function addMessage(role, text){
-  if (emptyState) emptyState.remove();
-  const el = document.createElement('div');
-  el.className = 'msg ' + role;
-  if (role === 'assistant'){
-    const md = document.createElement('div');
-    md.className = 'md';
-    md.innerHTML = renderMarkdown(text);
-    el.appendChild(md);
-  } else {
-    el.textContent = text;
-  }
-  chatScroll.appendChild(el);
-  chatScroll.scrollTop = chatScroll.scrollHeight;
-  return el;
-}
+    <div class="section-title">Прогресс</div>
+    <div id="progress-box">
+      <div class="rail-empty">Загрузка…</div>
+    </div>
 
-async function loadHistory(){
-  try{
-    const res = await fetch('/api/history');
-    const data = await res.json();
-    if (data.messages && data.messages.length){
-      data.messages.forEach(m => addMessage(m.role, m.content));
+    <div class="section-title">Еженедельный отчёт</div>
+    <div id="report-box">
+      <div class="rail-empty">Загрузка…</div>
+    </div>
+    <button type="button" class="report-btn" id="report-generate-btn">Сформировать отчёт сейчас</button>
+
+    <div class="section-title">Заметки памяти</div>
+    <div id="notes-box">
+      <div class="rail-empty">Загрузка…</div>
+    </div>
+  </aside>
+
+  <main class="main">
+    <div class="chat-header">
+      <div class="status-dot" id="status-dot"></div>
+      <div class="header-text">
+        <div class="header-name">Кот на месте</div>
+        <div class="header-status" id="header-status">готов помочь</div>
+      </div>
+      <div class="header-actions">
+        <button type="button" class="header-icon-btn" id="notif-btn" title="Включить уведомления">🔔</button>
+        <button type="button" class="header-icon-btn" id="clear-chat-btn" title="Очистить чат">🗑</button>
+      </div>
+    </div>
+
+    <div class="chat-scroll" id="chat-scroll">
+      <div class="empty-state" id="empty-state">
+        Спросите про расписание, поставьте задачу или просто расскажите,
+        над чем сейчас работаете — Кот подхватит контекст сам.
+      </div>
+    </div>
+
+    <form class="composer" id="composer">
+      <div class="attach-chip" id="attach-chip" style="display:none;">
+        <span>📎</span>
+        <span class="attach-chip-name" id="attach-chip-name"></span>
+        <button type="button" id="attach-chip-remove" aria-label="Убрать файл">✕</button>
+      </div>
+      <div class="composer-row">
+        <input type="file" id="file-input" hidden>
+        <button type="button" class="icon-btn" id="attach-btn" title="Прикрепить файл">📎</button>
+        <textarea id="message-input" placeholder="Напишите сообщение… или прикрепите файл" autofocus></textarea>
+        <button type="submit" id="send-btn">Отправить</button>
+      </div>
+    </form>
+  </main>
+
+  <script>
+    const chatScroll = document.getElementById('chat-scroll');
+    const emptyState = document.getElementById('empty-state');
+    const form = document.getElementById('composer');
+    const input = document.getElementById('message-input');
+    const sendBtn = document.getElementById('send-btn');
+    const statusDot = document.getElementById('status-dot');
+    const headerStatus = document.getElementById('header-status');
+
+    // Настройки marked: переносы строк как <br>, безопасные ссылки
+    marked.setOptions({ breaks: true, gfm: true });
+
+    function renderMarkdown(text) {
+      const rawHtml = marked.parse(text || '');
+      const cleanHtml = DOMPurify.sanitize(rawHtml, {
+        ADD_ATTR: ['target', 'rel']
+      });
+      // Открываем ссылки в новой вкладке
+      const wrapper = document.createElement('div');
+      wrapper.innerHTML = cleanHtml;
+      wrapper.querySelectorAll('a').forEach(a => {
+        a.setAttribute('target', '_blank');
+        a.setAttribute('rel', 'noopener noreferrer');
+      });
+      return wrapper.innerHTML;
     }
-  }catch(e){ console.error(e); }
-}
 
-async function sendMessage(text){
-  addMessage('user', text);
-  sendBtn.disabled = true;
-  statusDot.classList.add('thinking');
-  headerStatus.textContent = 'думает…';
-  try{
-    const res = await fetch('/api/chat', {
-      method:'POST',
-      headers:{'Content-Type':'application/json'},
-      body: JSON.stringify({message: text})
+    function addMessage(role, text, id) {
+      if (emptyState) emptyState.remove();
+      const el = document.createElement('div');
+      el.className = 'msg ' + role;
+      if (id !== undefined && id !== null) el.dataset.id = id;
+      if (role === 'assistant') {
+        const md = document.createElement('div');
+        md.className = 'md';
+        md.innerHTML = renderMarkdown(text);
+        el.appendChild(md);
+      } else {
+        el.textContent = text;
+      }
+      if (id !== undefined && id !== null) {
+        const delBtn = document.createElement('button');
+        delBtn.type = 'button';
+        delBtn.className = 'msg-delete';
+        delBtn.title = 'Удалить сообщение';
+        delBtn.textContent = '✕';
+        delBtn.addEventListener('click', () => deleteMessage(id, el));
+        el.appendChild(delBtn);
+      }
+      chatScroll.appendChild(el);
+      chatScroll.scrollTop = chatScroll.scrollHeight;
+      return el;
+    }
+
+    async function deleteMessage(id, el) {
+      try {
+        const res = await fetch('/api/history/delete', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ id })
+        });
+        const data = await res.json();
+        if (data.error) {
+          alert('Не удалось удалить: ' + data.error);
+          return;
+        }
+        el.remove();
+      } catch (e) {
+        alert('Не удалось связаться с сервером: ' + e);
+      }
+    }
+
+    const clearChatBtn = document.getElementById('clear-chat-btn');
+    clearChatBtn.addEventListener('click', async () => {
+      if (!confirm('Очистить всю историю чата? Это необратимо.')) return;
+      try {
+        await fetch('/api/history/clear', { method: 'POST' });
+        chatScroll.innerHTML = '';
+        const empty = document.createElement('div');
+        empty.className = 'empty-state';
+        empty.id = 'empty-state';
+        empty.textContent = 'История очищена. Начните новый разговор.';
+        chatScroll.appendChild(empty);
+      } catch (e) {
+        alert('Не удалось очистить историю: ' + e);
+      }
     });
-    const data = await res.json();
-    if (data.error){
-      addMessage('assistant', 'Ошибка: ' + data.error);
-    } else {
-      addMessage('assistant', data.reply);
+
+    async function loadHistory() {
+      try {
+        const res = await fetch('/api/history');
+        const data = await res.json();
+        if (data.messages && data.messages.length) {
+          data.messages.forEach(m => addMessage(m.role, m.content, m.id));
+        }
+      } catch (e) { console.error(e); }
     }
-  }catch(e){
-    addMessage('assistant', 'Не удалось связаться с сервером: ' + e);
-  }finally{
-    sendBtn.disabled = false;
-    statusDot.classList.remove('thinking');
-    headerStatus.textContent = 'готов помочь';
-    refreshSidebar();
-  }
-}
 
-form.addEventListener('submit', (e) => {
-  e.preventDefault();
-  const text = input.value.trim();
-  if (!text) return;
-  input.value = '';
-  input.style.height = '46px';
-  sendMessage(text);
-});
+    // ---------- Подтверждение деструктивных действий (удаление события/задачи) ----------
+    function addConfirmBox(actions) {
+      const box = document.createElement('div');
+      box.className = 'confirm-box';
+      const list = actions.map(a => {
+        const label = a.action === 'delete_event' ? 'Удалить событие из календаря'
+          : a.action === 'delete_task' ? 'Удалить задачу' : a.action;
+        const target = a.summary || a.title || '';
+        return `<li>${label}${target ? ': «' + escapeHtml(target) + '»' : ''}</li>`;
+      }).join('');
+      box.innerHTML = `<div>Кот просит подтвердить:</div><ul>${list}</ul>
+        <div class="confirm-actions">
+          <button type="button" class="confirm-btn-yes">Подтвердить</button>
+          <button type="button" class="confirm-btn-no">Отменить</button>
+        </div>`;
+      const yesBtn = box.querySelector('.confirm-btn-yes');
+      const noBtn = box.querySelector('.confirm-btn-no');
+      const resolveAll = async (confirmed) => {
+        yesBtn.disabled = true;
+        noBtn.disabled = true;
+        for (const action of actions) {
+          try {
+            const res = await fetch('/api/confirm_action', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ action, confirmed })
+            });
+            await res.json();
+          } catch (e) { console.error(e); }
+        }
+        box.classList.add('done');
+        box.querySelector('.confirm-actions').innerHTML =
+          confirmed ? '<em>Выполнено.</em>' : '<em>Отменено.</em>';
+        refreshSidebar();
+      };
+      yesBtn.addEventListener('click', () => resolveAll(true));
+      noBtn.addEventListener('click', () => resolveAll(false));
+      chatScroll.appendChild(box);
+      chatScroll.scrollTop = chatScroll.scrollHeight;
+    }
 
-input.addEventListener('keydown', (e) => {
-  if (e.key === 'Enter' && !e.shiftKey){
-    e.preventDefault();
-    form.requestSubmit();
-  }
-});
+    // ---------- Отправка сообщения через потоковый (SSE) эндпоинт ----------
+    async function sendMessage(payloadText) {
+      sendBtn.disabled = true;
+      statusDot.classList.add('thinking');
+      headerStatus.textContent = 'думает…';
 
-input.addEventListener('input', () => {
-  input.style.height = '46px';
-  input.style.height = Math.min(input.scrollHeight, 160) + 'px';
-});
+      const statusLine = document.createElement('div');
+      statusLine.className = 'status-line';
+      statusLine.textContent = 'Думаю над ответом…';
+      chatScroll.appendChild(statusLine);
+      chatScroll.scrollTop = chatScroll.scrollHeight;
 
-const monthsRu = {"01":"янв","02":"фев","03":"мар","04":"апр","05":"май","06":"июн",
-                   "07":"июл","08":"авг","09":"сен","10":"окт","11":"ноя","12":"дек"};
+      let assistantEl = null;
+      let assistantMd = null;
+      let accumulated = '';
 
-function renderEvents(events){
-  const box = document.getElementById('events-box');
-  if (!events || !events.length){
-    box.innerHTML = '<div class="rail-empty">Событий нет</div>';
-    return;
-  }
-  box.innerHTML = events.map(ev => {
-    const [y,m,d] = ev.date.split('-');
-    return `<div class="rail-card"><span class="event-time">${d} ${monthsRu[m]}, ${ev.time}</span>${escapeHtml(ev.summary)}</div>`;
-  }).join('');
-}
+      const ensureAssistantBubble = () => {
+        if (assistantEl) return;
+        if (statusLine.parentNode) statusLine.remove();
+        assistantEl = document.createElement('div');
+        assistantEl.className = 'msg assistant';
+        assistantMd = document.createElement('div');
+        assistantMd.className = 'md';
+        assistantEl.appendChild(assistantMd);
+        chatScroll.appendChild(assistantEl);
+      };
 
-function renderTasks(tasks){
-  const box = document.getElementById('tasks-box');
-  if (!tasks || !tasks.length){
-    box.innerHTML = '<div class="rail-empty">Активных задач нет</div>';
-    return;
-  }
-  box.innerHTML = tasks.map(t => {
-    const due = t.due ? `<div class="task-due">до ${t.due.replace('T',' ').slice(0,16)}</div>` : '';
-    return `<div class="rail-card task-row">
+      try {
+        const res = await fetch('/api/chat_stream', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ message: payloadText })
+        });
+        if (!res.ok || !res.body) {
+          throw new Error('Сервер вернул ошибку (' + res.status + ')');
+        }
+        const reader = res.body.getReader();
+        const decoder = new TextDecoder();
+        let buffer = '';
+
+        while (true) {
+          const { value, done } = await reader.read();
+          if (done) break;
+          buffer += decoder.decode(value, { stream: true });
+          const parts = buffer.split('\n\n');
+          buffer = parts.pop(); // последний кусок может быть неполным
+          for (const part of parts) {
+            const line = part.trim();
+            if (!line.startsWith('data:')) continue;
+            let event;
+            try {
+              event = JSON.parse(line.slice(5).trim());
+            } catch (e) { continue; }
+
+            if (event.type === 'status') {
+              statusLine.textContent = event.text;
+              headerStatus.textContent = event.text;
+              chatScroll.scrollTop = chatScroll.scrollHeight;
+            } else if (event.type === 'delta') {
+              ensureAssistantBubble();
+              accumulated += event.text;
+              assistantMd.textContent = accumulated; // без markdown в процессе печати - дешевле и без мерцания
+              chatScroll.scrollTop = chatScroll.scrollHeight;
+            } else if (event.type === 'confirmation_required') {
+              if (statusLine.parentNode) statusLine.remove();
+              addConfirmBox(event.actions);
+            } else if (event.type === 'final') {
+              if (statusLine.parentNode) statusLine.remove();
+              if (!assistantEl) ensureAssistantBubble();
+              assistantMd.innerHTML = renderMarkdown(event.text);
+            }
+          }
+        }
+      } catch (e) {
+        if (statusLine.parentNode) statusLine.remove();
+        addMessage('assistant', 'Не удалось связаться с сервером: ' + e);
+      } finally {
+        sendBtn.disabled = false;
+        statusDot.classList.remove('thinking');
+        headerStatus.textContent = 'готов помочь';
+        refreshSidebar();
+        loadNotes();
+      }
+    }
+
+    const fileInput = document.getElementById('file-input');
+    const attachBtn = document.getElementById('attach-btn');
+    const attachChip = document.getElementById('attach-chip');
+    const attachChipName = document.getElementById('attach-chip-name');
+    const attachChipRemove = document.getElementById('attach-chip-remove');
+    let pendingFile = null;
+
+    attachBtn.addEventListener('click', () => fileInput.click());
+
+    fileInput.addEventListener('change', () => {
+      if (fileInput.files && fileInput.files[0]) {
+        pendingFile = fileInput.files[0];
+        attachChipName.textContent = pendingFile.name;
+        attachChip.style.display = 'flex';
+      }
+    });
+
+    attachChipRemove.addEventListener('click', () => {
+      pendingFile = null;
+      fileInput.value = '';
+      attachChip.style.display = 'none';
+    });
+
+    async function uploadPendingFile(file) {
+      const formData = new FormData();
+      formData.append('file', file);
+      const res = await fetch('/api/upload', { method: 'POST', body: formData });
+      const data = await res.json();
+      if (!res.ok || data.error) throw new Error(data.error || 'Не удалось загрузить файл');
+      return data; // {filename, preview, truncated}
+    }
+
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const text = input.value.trim();
+      const currentFile = pendingFile;
+      if (!text && !currentFile) return;
+
+      // Сбрасываем поле ввода и вложение сразу, чтобы форма не блокировалась повторно
+      input.value = '';
+      input.style.height = '46px';
+      pendingFile = null;
+      fileInput.value = '';
+      attachChip.style.display = 'none';
+
+      if (!currentFile) {
+        addMessage('user', text);
+        sendMessage(text);
+        return;
+      }
+
+      // Есть прикреплённый файл: сначала загружаем его на сервер (в workspace),
+      // затем собираем сообщение для модели с его содержимым, а в чат показываем
+      // компактную версию (без полного текста файла).
+      addMessage('user', (text || 'Проверь этот файл.') + '\n📎 ' + currentFile.name);
+      sendBtn.disabled = true;
+      statusDot.classList.add('thinking');
+      headerStatus.textContent = 'загружает файл…';
+
+      let uploaded;
+      try {
+        uploaded = await uploadPendingFile(currentFile);
+      } catch (err) {
+        sendBtn.disabled = false;
+        statusDot.classList.remove('thinking');
+        headerStatus.textContent = 'готов помочь';
+        addMessage('assistant', 'Не удалось загрузить файл: ' + err.message);
+        return;
+      }
+
+      let payloadText;
+      if (uploaded.preview !== null && uploaded.preview !== undefined) {
+        const truncNote = uploaded.truncated ? '\n[содержимое обрезано - файл длиннее лимита предпросмотра]' : '';
+        payloadText = `[Прикреплён файл: ${uploaded.filename}]\n--- содержимое файла ---\n${uploaded.preview}${truncNote}\n--- конец файла ---\n\n${text || 'Проверь этот файл и исправь ошибки.'}`;
+      } else {
+        payloadText = `[Прикреплён файл: ${uploaded.filename}] (бинарный/нечитаемый напрямую как текст формат, файл сохранён в workspace)\n\n${text || 'Проверь этот файл.'}`;
+      }
+
+      sendMessage(payloadText);
+    });
+
+    input.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault();
+        form.requestSubmit();
+      }
+    });
+
+    input.addEventListener('input', () => {
+      input.style.height = '46px';
+      input.style.height = Math.min(input.scrollHeight, 160) + 'px';
+    });
+
+    const monthsRu = {
+      "01": "янв", "02": "фев", "03": "мар", "04": "апр", "05": "май", "06": "июн",
+      "07": "июл", "08": "авг", "09": "сен", "10": "окт", "11": "ноя", "12": "дек"
+    };
+
+    function renderEvents(events) {
+      const box = document.getElementById('events-box');
+      if (!events || !events.length) {
+        box.innerHTML = '<div class="rail-empty">Событий нет</div>';
+        return;
+      }
+      box.innerHTML = events.map(ev => {
+        const [y, m, d] = ev.date.split('-');
+        return `<div class="rail-card"><span class="event-time">${d} ${monthsRu[m]}, ${ev.time}</span>${escapeHtml(ev.summary)}</div>`;
+      }).join('');
+    }
+
+    function renderTasks(tasks) {
+      const box = document.getElementById('tasks-box');
+      if (!tasks || !tasks.length) {
+        box.innerHTML = '<div class="rail-empty">Активных задач нет</div>';
+        return;
+      }
+      box.innerHTML = tasks.map(t => {
+        const due = t.due ? `<div class="task-due">до ${t.due.replace('T', ' ').slice(0, 16)}</div>` : '';
+        return `<div class="rail-card task-row">
       <div class="task-dot ${t.priority}"></div>
       <div><div>${escapeHtml(t.title)}</div>${due}</div>
     </div>`;
-  }).join('');
-}
-
-function renderProgress(progress){
-  const box = document.getElementById('progress-box');
-  const topics = Object.keys(progress || {});
-  if (!topics.length){
-    box.innerHTML = '<div class="rail-empty">Пока нет данных</div>';
-    return;
-  }
-  box.innerHTML = topics.map(topic => {
-    const level = progress[topic].level || 0;
-    let dots = '';
-    for (let i=0;i<5;i++){
-      dots += i < level ? '●' : '<span class="empty">○</span>';
+      }).join('');
     }
-    return `<div class="progress-row">
+
+    function renderGoal(goal) {
+      const box = document.getElementById('goal-box');
+      if (!goal || goal.days_left === null || goal.days_left === undefined) {
+        box.innerHTML = '<div class="rail-empty">Цель не задана</div>';
+        return;
+      }
+      const urgentTotal = goal.days_left < 180;
+      const countries = (goal.target_countries || []).join(' / ');
+
+      const milestonesHtml = (goal.milestones || []).map(m => {
+        const level = m.current_level || 0;
+        const pct = Math.round((level / 5) * 100);
+        const behind = (m.days_left !== null && m.days_left !== undefined && m.days_left < 60 && level < 4);
+        const due = m.target_date ? `<div class="milestone-due">до ${m.target_date}${m.days_left !== null && m.days_left !== undefined ? ' · ' + m.days_left + ' дн.' : ''}</div>` : '';
+        const topicAttr = escapeHtml(m.topic).replace(/'/g, '&#39;');
+        return `<div class="milestone-row ${behind ? 'behind' : ''}">
+      <div class="milestone-top">
+        <span class="milestone-topic">${escapeHtml(m.topic)}</span>
+        <span>
+          <span class="milestone-target">цель: ${escapeHtml(m.target_level || '')}</span>
+          <button type="button" class="milestone-edit-btn" data-topic="${topicAttr}"
+            data-level="${escapeHtml(m.target_level || '')}" data-date="${escapeHtml(m.target_date || '')}"
+            data-notes="${escapeHtml(m.notes || '')}" title="Изменить веху">✎</button>
+        </span>
+      </div>
+      <div class="milestone-bar-track"><div class="milestone-bar-fill" style="width:${pct}%"></div></div>
+      ${due}
+    </div>`;
+      }).join('');
+
+      box.innerHTML = `
+    <div class="goal-card ${urgentTotal ? 'goal-urgent' : ''}">
+      <div class="goal-countdown">
+        <span class="goal-days">${goal.days_left}</span>
+        <span class="goal-days-label">дней</span>
+      </div>
+      <div class="goal-sub">до переезда в <b>${escapeHtml(countries)}</b> · ${goal.months_left} мес.</div>
+      ${milestonesHtml}
+    </div>
+  `;
+
+      box.querySelectorAll('.milestone-edit-btn').forEach(btn => {
+        btn.addEventListener('click', async () => {
+          const topic = btn.dataset.topic;
+          const newLevel = prompt(`Целевой уровень для «${topic}» (например C1, B2-C1):`, btn.dataset.level || '');
+          if (newLevel === null) return;
+          const newDate = prompt(`Целевая дата для «${topic}» (ГГГГ-ММ-ДД):`, btn.dataset.date || '');
+          if (newDate === null) return;
+          const newNotes = prompt(`Заметка по «${topic}» (необязательно):`, btn.dataset.notes || '');
+          try {
+            const res = await fetch('/api/goals/update', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ topic, target_level: newLevel, target_date: newDate, notes: newNotes })
+            });
+            const data = await res.json();
+            if (data.error) {
+              alert('Ошибка: ' + data.error);
+            } else {
+              renderGoal(data.goal);
+            }
+          } catch (e) {
+            alert('Не удалось обновить веху: ' + e);
+          }
+        });
+      });
+    }
+
+    const ROADMAP_HORIZON_ORDER = ['week', 'month', 'quarter', 'half_year', 'year'];
+
+    function renderRoadmap(roadmap) {
+      const box = document.getElementById('roadmap-box');
+      if (!roadmap || !roadmap.length) {
+        box.innerHTML = '<div class="rail-empty">Пока нет активных треков</div>';
+        return;
+      }
+      box.innerHTML = roadmap.map(track => {
+        const byHorizon = {};
+        (track.checkpoints || []).forEach(cp => { byHorizon[cp.horizon] = cp; });
+        const cellsHtml = ROADMAP_HORIZON_ORDER.map(h => {
+          const cp = byHorizon[h];
+          if (!cp) return `<div class="roadmap-cp" style="opacity:.25;"><div class="roadmap-cp-dot"></div><div class="roadmap-cp-label">${h}</div></div>`;
+          const overdue = (cp.days_left !== null && cp.days_left !== undefined && cp.days_left < 0 && !cp.done);
+          const cls = ['roadmap-cp'];
+          if (cp.done) cls.push('done');
+          if (overdue) cls.push('overdue');
+          const topicAttr = escapeHtml(track.topic).replace(/'/g, '&#39;');
+          return `<div class="${cls.join(' ')}" data-topic="${topicAttr}" data-horizon="${cp.horizon}"
+              data-date="${escapeHtml(cp.target_date || '')}" data-level="${escapeHtml(String(cp.level_target ?? ''))}"
+              data-desc="${escapeHtml(cp.description || '')}" data-done="${cp.done ? '1' : '0'}"
+              title="${escapeHtml(cp.description || '')} · до ${escapeHtml(cp.target_date || '?')}">
+            <div class="roadmap-cp-dot"></div>
+            <div class="roadmap-cp-label">${cp.label}</div>
+          </div>`;
+        }).join('');
+        return `<div class="roadmap-topic-block">
+          <div class="roadmap-topic-title">${escapeHtml(track.topic)} · ${track.current_level}/5</div>
+          <div class="roadmap-track">${cellsHtml}</div>
+        </div>`;
+      }).join('');
+
+      box.querySelectorAll('.roadmap-cp').forEach(cell => {
+        cell.addEventListener('click', async () => {
+          const topic = cell.dataset.topic;
+          const horizon = cell.dataset.horizon;
+          const newDesc = prompt(`Промежуточная цель (${horizon}) для «${topic}»:`, cell.dataset.desc || '');
+          if (newDesc === null) return;
+          const newDate = prompt(`Дедлайн этого чекпоинта (ГГГГ-ММ-ДД):`, cell.dataset.date || '');
+          if (newDate === null) return;
+          const doneAnswer = confirm('Отметить этот чекпоинт как выполненный? (ОК = да, Отмена = нет)');
+          try {
+            const res = await fetch('/api/roadmap/checkpoint', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ topic, horizon, description: newDesc, target_date: newDate, done: doneAnswer })
+            });
+            const data = await res.json();
+            if (data.error) {
+              alert('Ошибка: ' + data.error);
+            } else {
+              renderRoadmap(data.roadmap);
+            }
+          } catch (e) {
+            alert('Не удалось обновить чекпоинт: ' + e);
+          }
+        });
+      });
+    }
+
+    function renderObsidian(vaultPath) {
+      const box = document.getElementById('obsidian-box');
+      const connected = !!vaultPath;
+      box.innerHTML = `
+        <div class="obsidian-status ${connected ? 'connected' : ''}">
+          ${connected ? '✓ ' + escapeHtml(vaultPath) : 'Vault не подключён'}
+        </div>
+        <input type="text" id="obsidian-path-input" placeholder="Путь к папке vault на диске…" />
+        <button type="button" id="obsidian-connect-btn">${connected ? 'Сменить vault' : 'Подключить vault'}</button>
+      `;
+      document.getElementById('obsidian-connect-btn').addEventListener('click', async () => {
+        const input = document.getElementById('obsidian-path-input');
+        const path = (input.value || '').trim();
+        if (!path) return;
+        try {
+          const res = await fetch('/api/obsidian/vault', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ path })
+          });
+          const data = await res.json();
+          if (data.error) {
+            alert('Ошибка: ' + data.error);
+          } else {
+            alert(data.result);
+            renderObsidian(data.vault_path);
+          }
+        } catch (e) {
+          alert('Не удалось подключить vault: ' + e);
+        }
+      });
+    }
+
+    // Строит маленький спарклайн (points во времени) по истории темы - последние 20 точек.
+    // Помогает увидеть тренд ("реально растёт" или "топчется на месте"), а не только
+    // текущее значение points/level, которое одно само по себе не показывает динамику.
+    function buildSparkline(history) {
+      const points = (history || []).slice(-20).map(h => h.points || 0);
+      if (points.length < 2) return '';
+      const w = 240, h = 24, pad = 2;
+      const max = Math.max(100, ...points);
+      const min = 0;
+      const step = (w - pad * 2) / (points.length - 1);
+      const coords = points.map((p, i) => {
+        const x = pad + i * step;
+        const y = h - pad - ((p - min) / (max - min || 1)) * (h - pad * 2);
+        return `${x.toFixed(1)},${y.toFixed(1)}`;
+      }).join(' ');
+      return `<svg class="progress-sparkline" viewBox="0 0 ${w} ${h}" width="${w}" height="${h}">
+        <polyline points="${coords}"></polyline>
+      </svg>`;
+    }
+
+    function renderProgress(progress) {
+      const box = document.getElementById('progress-box');
+      const topics = Object.keys(progress || {});
+      if (!topics.length) {
+        box.innerHTML = '<div class="rail-empty">Пока нет данных</div>';
+        return;
+      }
+      box.innerHTML = topics.map(topic => {
+        const entry = progress[topic] || {};
+        const level = entry.level || 0;
+        const points = entry.points || 0;
+        let dots = '';
+        for (let i = 0; i < 5; i++) {
+          dots += i < level ? '●' : '<span class="empty">○</span>';
+        }
+        const quizLog = entry.quiz_log || [];
+        const lastQuiz = quizLog.length ? quizLog[quizLog.length - 1] : null;
+        const quizText = lastQuiz ? `квиз: ${lastQuiz.correct}/${lastQuiz.total} (${lastQuiz.score}%)` : 'квизов ещё не было';
+        const sparkline = buildSparkline(entry.history);
+        return `<div class="progress-row">
       <div class="progress-top"><span class="progress-topic">${escapeHtml(topic)}</span></div>
       <div class="progress-dots">${dots}</div>
+      <div class="points-bar-track"><div class="points-bar-fill" style="width:${points}%"></div></div>
+      <div class="progress-meta"><span>${points}/100</span><span>${escapeHtml(quizText)}</span></div>
+      ${sparkline}
     </div>`;
-  }).join('');
-}
+      }).join('');
+    }
 
-function escapeHtml(str){
-  const div = document.createElement('div');
-  div.textContent = str;
-  return div.innerHTML;
-}
+    function renderWeeklyReport(reportData) {
+      const box = document.getElementById('report-box');
+      const report = reportData && reportData.report;
+      if (!report || !report.content) {
+        box.innerHTML = '<div class="rail-empty">Отчётов ещё не было</div>';
+        return;
+      }
+      box.innerHTML = `
+        <div class="report-meta">неделя ${escapeHtml(report.week || '')}</div>
+        <div class="report-card md">${renderMarkdown(report.content)}</div>
+      `;
+    }
 
-async function refreshSidebar(){
-  try{
-    const res = await fetch('/api/state');
-    const data = await res.json();
-    renderEvents(data.events);
-    renderTasks(data.tasks);
-    renderProgress(data.progress);
-  }catch(e){ console.error(e); }
-}
+    async function loadWeeklyReport() {
+      try {
+        const res = await fetch('/api/weekly_report');
+        const data = await res.json();
+        renderWeeklyReport(data);
+      } catch (e) { console.error(e); }
+    }
 
-loadHistory();
-refreshSidebar();
-setInterval(refreshSidebar, 60000);
-</script>
+    const reportGenerateBtn = document.getElementById('report-generate-btn');
+    reportGenerateBtn.addEventListener('click', async () => {
+      reportGenerateBtn.disabled = true;
+      reportGenerateBtn.textContent = 'Формирую…';
+      try {
+        const res = await fetch('/api/weekly_report/generate', { method: 'POST' });
+        const data = await res.json();
+        if (data.error) {
+          alert('Ошибка: ' + data.error);
+        } else {
+          renderWeeklyReport(data);
+        }
+      } catch (e) {
+        alert('Не удалось связаться с сервером: ' + e);
+      } finally {
+        reportGenerateBtn.disabled = false;
+        reportGenerateBtn.textContent = 'Сформировать отчёт сейчас';
+      }
+    });
+
+    function escapeHtml(str) {
+      const div = document.createElement('div');
+      div.textContent = str;
+      return div.innerHTML;
+    }
+
+    async function refreshSidebar() {
+      try {
+        const res = await fetch('/api/state');
+        const data = await res.json();
+        renderGoal(data.goal);
+        renderEvents(data.events);
+        renderTasks(data.tasks);
+        renderProgress(data.progress);
+        renderRoadmap(data.roadmap);
+        renderObsidian(data.obsidian_vault);
+      } catch (e) { console.error(e); }
+    }
+
+    function formatModelLabel(m) {
+      // Пример: "qwen2.5-coder:14b (14.8B, Q4_K_M)"
+      const parts = [];
+      if (m.param_size) parts.push(m.param_size);
+      if (m.quant) parts.push(m.quant);
+      return parts.length ? `${m.name} (${parts.join(', ')})` : m.name;
+    }
+
+    async function loadModels() {
+      const select = document.getElementById('model-select');
+      const hint = document.getElementById('model-hint');
+      try {
+        const res = await fetch('/api/models');
+        const data = await res.json();
+        if (data.error) {
+          select.innerHTML = '<option>Ollama недоступна</option>';
+          hint.textContent = data.error;
+          return;
+        }
+        if (!data.models || data.models.length === 0) {
+          select.innerHTML = '<option>Нет локальных моделей</option>';
+          hint.textContent = 'Скачайте модель через "ollama pull <имя>"';
+          return;
+        }
+        select.innerHTML = data.models.map(m =>
+          `<option value="${escapeHtml(m.name)}">${escapeHtml(formatModelLabel(m))}</option>`
+        ).join('');
+        select.value = data.current;
+        select.disabled = false;
+        hint.textContent = '';
+      } catch (e) {
+        select.innerHTML = '<option>Ошибка загрузки</option>';
+        hint.textContent = 'Не удалось связаться с сервером';
+      }
+    }
+
+    const modelSelect = document.getElementById('model-select');
+    modelSelect.addEventListener('change', async () => {
+      const hint = document.getElementById('model-hint');
+      const chosen = modelSelect.value;
+      modelSelect.disabled = true;
+      hint.textContent = 'Переключаю…';
+      try {
+        const res = await fetch('/api/models/select', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ model: chosen })
+        });
+        const data = await res.json();
+        if (data.error) {
+          hint.textContent = 'Ошибка: ' + data.error;
+        } else {
+          hint.textContent = `Активна: ${chosen}`;
+        }
+      } catch (e) {
+        hint.textContent = 'Не удалось переключить модель: ' + e;
+      } finally {
+        modelSelect.disabled = false;
+      }
+    });
+
+    // ---------- Заметки памяти (memory_notes.json через /api/memory_notes) ----------
+    async function loadNotes() {
+      const box = document.getElementById('notes-box');
+      try {
+        const res = await fetch('/api/memory_notes');
+        const data = await res.json();
+        if (data.error) {
+          box.innerHTML = `<div class="rail-empty">${escapeHtml(data.error)}</div>`;
+          return;
+        }
+        const notes = (data.notes || []).slice(-8).reverse();
+        if (!notes.length) {
+          box.innerHTML = '<div class="rail-empty">Заметок пока нет</div>';
+          return;
+        }
+        box.innerHTML = notes.map(n => {
+          const tags = (n.tags || []).map(t => '#' + escapeHtml(t)).join(' ');
+          return `<div class="note-card">
+        <div>${escapeHtml(n.text)}</div>
+        ${tags ? `<div class="note-tags">${tags}</div>` : ''}
+      </div>`;
+        }).join('');
+      } catch (e) {
+        box.innerHTML = '<div class="rail-empty">Не удалось загрузить заметки</div>';
+      }
+    }
+
+    // ---------- Уведомления (напоминания о календаре/задачах, готовый отчёт и т.п.) ----------
+    // send_windows_notification на бэкенде теперь кладёт каждое уведомление в очередь;
+    // здесь мы её периодически опрашиваем и показываем через Web Notifications API,
+    // если пользователь дал разрешение (иначе - тихо, без спама alert'ами).
+    const notifBtn = document.getElementById('notif-btn');
+
+    function updateNotifBtnState() {
+      if (!('Notification' in window)) {
+        notifBtn.style.display = 'none';
+        return;
+      }
+      notifBtn.classList.toggle('active', Notification.permission === 'granted');
+      notifBtn.title = Notification.permission === 'granted'
+        ? 'Уведомления включены' : 'Включить уведомления';
+    }
+
+    notifBtn.addEventListener('click', async () => {
+      if (!('Notification' in window)) return;
+      if (Notification.permission === 'default') {
+        await Notification.requestPermission();
+      }
+      updateNotifBtnState();
+    });
+    updateNotifBtnState();
+
+    async function pollNotifications() {
+      try {
+        const res = await fetch('/api/notifications');
+        const data = await res.json();
+        const items = data.notifications || [];
+        if (!items.length) return;
+        if ('Notification' in window && Notification.permission === 'granted') {
+          items.forEach(n => new Notification(n.title, { body: n.message }));
+        } else {
+          // Разрешения нет - хотя бы отметим в статусе шапки, чтобы не потерять уведомление молча
+          headerStatus.textContent = items[items.length - 1].message;
+        }
+      } catch (e) { /* тихо игнорируем - не критично для основного функционала */ }
+    }
+
+    loadHistory();
+    refreshSidebar();
+    loadWeeklyReport();
+    loadModels();
+    loadNotes();
+    pollNotifications();
+    setInterval(refreshSidebar, 60000);
+    setInterval(loadWeeklyReport, 5 * 60000);
+    setInterval(loadNotes, 5 * 60000);
+    setInterval(pollNotifications, 20000);
+  </script>
 
 </body>
+
 </html>
